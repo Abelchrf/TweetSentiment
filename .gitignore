@@ -1,0 +1,16 @@
+# Envs
+.venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints/
+
+# Models & cache
+/models/
+/cache/
+**/.cache/
+
+# Misc
+*.log
