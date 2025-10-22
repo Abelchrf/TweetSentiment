@@ -1,3 +1,4 @@
+# src/train.py
 import argparse
 import numpy as np
 from transformers import (
@@ -33,32 +34,52 @@ def main():
         args.model_name, num_labels=len(label_names)
     )
 
-    training_args = TrainingArguments(
-        output_dir=args.output_dir,
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
-        learning_rate=args.lr,
-        per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
-        num_train_epochs=args.epochs,
-        weight_decay=0.01,
-        logging_steps=50,
-        load_best_model_at_end=True,
-        metric_for_best_model="f1_macro",
-        report_to=["none"],
-    )
+    # --- Compatibilité large: on essaie d'abord la signature récente,
+    # --- sinon on tombe sur une config minimale sans 'evaluation_strategy'.
+    try:
+        training_args = TrainingArguments(
+            output_dir=args.output_dir,
+            evaluation_strategy="epoch",   # <- peut être rejeté selon la version
+            save_strategy="epoch",
+            learning_rate=args.lr,
+            per_device_train_batch_size=args.batch_size,
+            per_device_eval_batch_size=args.batch_size,
+            num_train_epochs=args.epochs,
+            weight_decay=0.01,
+            logging_steps=50,
+            load_best_model_at_end=True,
+            metric_for_best_model="f1_macro",
+            report_to=["none"],
+        )
+    except TypeError:
+        # Fallback compatible (pas d'éval automatique pendant train)
+        training_args = TrainingArguments(
+            output_dir=args.output_dir,
+            learning_rate=args.lr,
+            per_device_train_batch_size=args.batch_size,
+            per_device_eval_batch_size=args.batch_size,
+            num_train_epochs=args.epochs,
+            weight_decay=0.01,
+            logging_steps=50,
+        )
 
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=ds["train"],
-        eval_dataset=ds["validation"],
+        eval_dataset=ds["validation"],   # même si pas d'éval auto, on pourra appeler evaluate()
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
 
     trainer.train()
+    # Si la version ne faisait pas d'éval pendant le train, on force une éval à la fin :
+    try:
+        trainer.evaluate()
+    except Exception:
+        pass
+
     trainer.save_model(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
     print(f"✅ Modèle sauvegardé dans {args.output_dir}")
