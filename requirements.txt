@@ -1,0 +1,13 @@
+# Core
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+
+# Transformers & Training
+torch>=2.2
+transformers>=4.44
+datasets>=2.20
+accelerate>=0.33
+
+# App
+streamlit>=1.37
